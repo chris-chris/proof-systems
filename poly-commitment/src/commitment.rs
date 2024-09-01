@@ -265,6 +265,8 @@ impl<C: AffineCurve> PolyComm<C> {
     ///
     /// Panics if `com` and `elm` are not of the same size.
     pub fn multi_scalar_mul(com: &[&PolyComm<C>], elm: &[C::ScalarField]) -> Self {
+        println!("multi_scalar_mul MSM start");
+        let start = Instant::now();
         assert_eq!(com.len(), elm.len());
 
         if com.is_empty() || elm.is_empty() {
@@ -287,7 +289,8 @@ impl<C: AffineCurve> PolyComm<C> {
             let chunk_msm = VariableBaseMSM::multi_scalar_mul::<C>(&points, &scalars);
             elems.push(chunk_msm.into_affine());
         }
-
+        let duration = start.elapsed();
+        println!("Time elapsed in multi_scalar_mul MSM is: {:?}", duration);
         Self::new(elems)
     }
 }
