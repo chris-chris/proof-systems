@@ -6,6 +6,7 @@
 //!     producing the batched opening proof
 //! 3. Verify batch of batched opening proofs
 
+use std::time::{Duration, Instant};
 use crate::{
     error::CommitmentError,
     srs::{endos, SRS},
