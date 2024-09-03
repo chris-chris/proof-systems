@@ -176,6 +176,7 @@ where
     where
         VerifierIndex<G, OpeningProof>: Clone,
     {
+        println!("kimchi create_recursive START");
         internal_tracing::checkpoint!(internal_traces; create_recursive);
         let d1_size = index.cs.domain.d1.size();
 
