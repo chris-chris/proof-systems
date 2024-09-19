@@ -31,6 +31,8 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::iter::Iterator;
+use lazy_static::lazy_static;
+use std::sync::{Arc, Mutex};
 
 use super::evaluation_proof::*;
 
@@ -50,6 +52,12 @@ where
 {
     pub commitment: PolyComm<G>,
     pub blinders: PolyComm<G::ScalarField>,
+}
+
+// Global static variables to store execution metrics
+lazy_static! {
+    static ref FUNCTION_CALL_COUNT: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
+    static ref ACCUMULATED_TIME: Arc<Mutex<std::time::Duration>> = Arc::new(Mutex::new(std::time::Duration::new(0, 0)));
 }
 
 impl<T> PolyComm<T> {
@@ -204,8 +212,12 @@ impl<C: AffineCurve> PolyComm<C> {
     ///
     /// Panics if `com` and `elm` are not of the same size.
     pub fn multi_scalar_mul(com: &[&PolyComm<C>], elm: &[C::ScalarField]) -> Self {
-        println!("multi_scalar_mul MSM start");
+        // println!("multi_scalar_mul MSM start");
         let start = Instant::now();
+        // Increment the function call count
+        let mut call_count = FUNCTION_CALL_COUNT.lock().unwrap();
+        *call_count += 1;
+
         assert_eq!(com.len(), elm.len());
 
         if com.is_empty() || elm.is_empty() {
@@ -228,11 +240,27 @@ impl<C: AffineCurve> PolyComm<C> {
             let chunk_msm = VariableBaseMSM::multi_scalar_mul::<C>(&points, &scalars);
             elems.push(chunk_msm.into_affine());
         }
+
         let duration = start.elapsed();
-        println!("Time elapsed in multi_scalar_mul MSM is: {:?}", duration);
+        let mut accumulated_time = ACCUMULATED_TIME.lock().unwrap();
+        *accumulated_time += duration;
+        // let duration = start.elapsed();
+        // println!("Time elapsed in multi_scalar_mul MSM is: {:?}", duration);
 
         Self::new(elems)
     }
+}
+
+/// Provides access to the recorded number of function calls.
+pub fn get_msm_function_call_count() -> u64 {
+    let call_count = FUNCTION_CALL_COUNT.lock().unwrap();
+    *call_count
+}
+
+/// Provides access to the recorded accumulated execution time.
+pub fn get_msm_accumulated_time() -> std::time::Duration {
+    let accumulated_time = ACCUMULATED_TIME.lock().unwrap();
+    *accumulated_time
 }
 
 /// Returns the product of all the field elements belonging to an iterator.
