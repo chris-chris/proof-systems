@@ -1114,6 +1114,7 @@ dependencies = [
  "iai",
  "internal-tracing",
  "itertools",
+ "lazy_static",
  "mina-curves",
  "mina-poseidon",
  "num-bigint",

@@ -203,6 +203,7 @@ where
     /** Once finalized, a circuit is represented as a digest
         and a list of gates that corresponds to the circuit.
     */
+    #[warn(dead_code)]
     Compiled([u8; 32], Vec<CircuitGate<F>>),
 }
 

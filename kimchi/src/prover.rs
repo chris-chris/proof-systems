@@ -1,5 +1,6 @@
 //! This module implements prover's zk-proof primitive.
 
+use std::time::Instant;
 use crate::{
     circuits::{
         argument::{Argument, ArgumentType},
@@ -52,8 +53,17 @@ use rayon::prelude::*;
 use std::array;
 use std::collections::HashMap;
 
+use lazy_static::lazy_static;
+use std::sync::{Arc, Mutex};
+
 /// The result of a proof creation or verification.
 type Result<T> = std::result::Result<T, ProverError>;
+
+// Global static variables to store execution metrics
+lazy_static! {
+    static ref FUNCTION_CALL_COUNT: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
+    static ref ACCUMULATED_TIME: Arc<Mutex<std::time::Duration>> = Arc::new(Mutex::new(std::time::Duration::new(0, 0)));
+}
 
 /// Helper to quickly test if a witness satisfies a constraint
 macro_rules! check_constraint {
@@ -122,6 +132,18 @@ where
     runtime_second_col_d8: Option<Evaluations<F, D<F>>>,
 }
 
+
+/// Provides access to the recorded number of function calls.
+pub fn get_ntt_function_call_count() -> u64 {
+    let call_count = FUNCTION_CALL_COUNT.lock().unwrap();
+    *call_count
+}
+
+/// Provides access to the recorded accumulated execution time.
+pub fn get_ntt_accumulated_time() -> std::time::Duration {
+    let accumulated_time = ACCUMULATED_TIME.lock().unwrap();
+    *accumulated_time
+}
 impl<G: KimchiCurve, OpeningProof: OpenProof<G>> ProverProof<G, OpeningProof>
 where
     G::BaseField: PrimeField,
@@ -318,6 +340,11 @@ where
             .try_into()
             .expect("previous loop is of the correct length");
 
+        // Increment the function call count
+        let mut call_count = FUNCTION_CALL_COUNT.lock().unwrap();
+        *call_count += 1;
+
+        let start_ntt = Instant::now();
         //~ 1. Absorb the witness commitments with the Fq-Sponge.
         w_comm
             .iter()
@@ -334,6 +361,12 @@ where
             )
             .interpolate()
         });
+
+        let ntt_time = start_ntt.elapsed();
+        println!("ntt_time: {:?}", ntt_time);
+
+        let mut accumulated_time = ACCUMULATED_TIME.lock().unwrap();
+        *accumulated_time += ntt_time;
 
         let mut lookup_context = LookupContext::default();
 
